@@ -257,7 +257,22 @@ USER QUESTION:
 ${input}`
         : input;
 
+    const displayMessage =
+      attachedFile
+        ? `📎 ${attachedFile.name}
+
+${input}`
+        : input;
+
     const updatedMessages = [
+      ...messages,
+      {
+        role: "user",
+        content: displayMessage,
+      },
+    ];
+
+    const apiMessages = [
       ...messages,
       {
         role: "user",
@@ -319,7 +334,7 @@ ${input}`
             provider,
             model,
             messages:
-              updatedMessages,
+              apiMessages,
           }),
         }
       );
@@ -417,8 +432,41 @@ ${input}`
     if (!file)
       return;
 
-    const content =
-      await file.text();
+    let content = "";
+
+    if (
+      file.name
+        .toLowerCase()
+        .endsWith(".pdf")
+    ) {
+
+      const formData =
+        new FormData();
+
+      formData.append(
+        "file",
+        file
+      );
+
+      const response =
+        await fetch(
+          "http://127.0.0.1:8000/extract-pdf",
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
+
+      const data =
+        await response.json();
+
+      content = data.text;
+
+    } else {
+
+      content =
+        await file.text();
+    }
 
     setAttachedFile(file);
     setAttachedContent(content);
