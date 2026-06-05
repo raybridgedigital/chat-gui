@@ -18,11 +18,21 @@ function App() {
   const [models, setModels] = useState([]);
   const [model, setModel] = useState("");
 
+  const [attachedFile, setAttachedFile] =
+    useState(null);
+
+  const [attachedContent, setAttachedContent] =
+    useState("");
+
   const [conversations, setConversations] = useState([]);
   const [activeConversationId, setActiveConversationId] =
     useState(null);
 
   const chatEndRef = useRef(null);
+  const chatWindowRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const textareaRef = useRef(null);
+  const pinnedToBottomRef = useRef(true);
 
   const activeConversation =
     conversations.find(
@@ -109,10 +119,32 @@ function App() {
   }, [provider]);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({
-      behavior: "smooth",
-    });
-  }, [messages, loading]);
+
+    if (
+      pinnedToBottomRef.current &&
+      chatEndRef.current
+    ) {
+      chatEndRef.current.scrollIntoView();
+    }
+
+  }, [messages]);
+
+  
+function handleChatScroll() {
+
+    const el =
+      chatWindowRef.current;
+
+    if (!el) return;
+
+    const nearBottom =
+      el.scrollHeight -
+      el.scrollTop -
+      el.clientHeight < 100;
+
+    pinnedToBottomRef.current =
+      nearBottom;
+  }
 
   function createNewChat() {
     const convo = createConversation();
@@ -192,22 +224,44 @@ function App() {
 
   async function sendMessage() {
     if (
-      !input.trim() ||
       loading ||
       !activeConversation
     )
       return;
 
+    if (
+      !input.trim() &&
+      !attachedFile
+    )
+      return;
+
     const title =
       activeConversation.messages.length === 0
-        ? input.slice(0, 40)
+        ? (
+            input.trim()
+              ? input.slice(0, 40)
+              : attachedFile
+                ? `📄 ${attachedFile.name}`
+                : "New Chat"
+          )
         : activeConversation.title;
+
+    const finalPrompt =
+      attachedFile
+        ? `FILE: ${attachedFile.name}
+
+${attachedContent}
+
+USER QUESTION:
+
+${input}`
+        : input;
 
     const updatedMessages = [
       ...messages,
       {
         role: "user",
-        content: input,
+        content: finalPrompt,
       },
     ];
 
@@ -224,7 +278,33 @@ function App() {
     );
 
     setInput("");
+
+    setAttachedFile(null);
+    setAttachedContent("");
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+
+    pinnedToBottomRef.current = true;
+
     setLoading(true);
+
+    setTimeout(() => {
+      chatEndRef.current?.scrollIntoView({
+        behavior: "smooth",
+      });
+    }, 50);
+
+    setAttachedFile(null);
+    setAttachedContent("");
+
+
+    setTimeout(() => {
+      chatEndRef.current?.scrollIntoView({
+        behavior: "smooth",
+      });
+    }, 50);
 
     try {
       const response = await fetch(
@@ -329,6 +409,31 @@ function App() {
     setLoading(false);
   }
 
+  async function handleFileUpload(e) {
+
+    const file =
+      e.target.files?.[0];
+
+    if (!file)
+      return;
+
+    const content =
+      await file.text();
+
+    setAttachedFile(file);
+    setAttachedContent(content);
+
+    setTimeout(() => {
+      textareaRef.current?.focus();
+    }, 50);
+  }
+
+  function removeAttachment() {
+
+    setAttachedFile(null);
+    setAttachedContent("");
+  }
+
   function handleKeyDown(e) {
     if (
       e.key === "Enter" &&
@@ -417,7 +522,7 @@ function App() {
       <div className="main-panel">
 
         <header className="topbar">
-          <h2>Chat GUI</h2>
+          <h2>Reza GPT</h2>
 
           <div className="selectors">
             <select
@@ -457,7 +562,11 @@ function App() {
           </div>
         </header>
 
-        <div className="chat-window">
+        <div
+          className="chat-window"
+          ref={chatWindowRef}
+          onScroll={handleChatScroll}
+        >
           {messages.map(
             (msg, idx) => (
               <div
@@ -480,7 +589,38 @@ function App() {
           <div ref={chatEndRef}></div>
         </div>
 
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+            marginBottom: "10px",
+            alignItems: "center",
+          }}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".txt,.md"
+            onChange={handleFileUpload}
+          />
+
+          {attachedFile && (
+            <>
+              <span>
+                📎 {attachedFile.name}
+              </span>
+
+              <button
+                onClick={removeAttachment}
+              >
+                ✖
+              </button>
+            </>
+          )}
+        </div>
+
         <textarea
+          ref={textareaRef}
           value={input}
           rows="4"
           placeholder="Type message..."
