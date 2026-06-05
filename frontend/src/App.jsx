@@ -1,9 +1,55 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import "./App.css";
 
 function App() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  const [provider, setProvider] = useState("openrouter");
+  const [models, setModels] = useState([]);
+  const [model, setModel] = useState("");
+
+  useEffect(() => {
+    loadModels();
+  }, []);
+
+  async function loadModels() {
+    const response = await fetch(
+      "http://127.0.0.1:8000/models"
+    );
+
+    const data = await response.json();
+
+    const providerModels = data[provider];
+
+    setModels(providerModels);
+
+    if (providerModels.length > 0) {
+      setModel(providerModels[0].id);
+    }
+  }
+
+  useEffect(() => {
+    async function reload() {
+      const response = await fetch(
+        "http://127.0.0.1:8000/models"
+      );
+
+      const data = await response.json();
+
+      const providerModels = data[provider];
+
+      setModels(providerModels);
+
+      if (providerModels.length > 0) {
+        setModel(providerModels[0].id);
+      }
+    }
+
+    reload();
+  }, [provider]);
 
   async function sendMessage() {
     if (!input.trim() || loading) return;
@@ -29,7 +75,8 @@ function App() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "openai/gpt-oss-120b:free",
+            provider,
+            model,
             messages: updatedMessages,
           }),
         }
@@ -44,7 +91,7 @@ function App() {
           content: data.response,
         },
       ]);
-    } catch (err) {
+    } catch {
       setMessages([
         ...updatedMessages,
         {
@@ -65,86 +112,74 @@ function App() {
   }
 
   return (
-    <div
-      style={{
-        maxWidth: "1000px",
-        margin: "0 auto",
-        height: "100vh",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      <h2>Chat GUI</h2>
+    <div className="app">
+      <header className="topbar">
+        <h2>Chat GUI</h2>
 
-      <div
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: "20px",
-          border: "1px solid #ddd",
-          borderRadius: "10px",
-          marginBottom: "10px",
-        }}
-      >
+        <div className="selectors">
+          <select
+            value={provider}
+            onChange={(e) =>
+              setProvider(e.target.value)
+            }
+          >
+            <option value="openrouter">
+              OpenRouter
+            </option>
+
+            <option value="ollama">
+              Ollama
+            </option>
+          </select>
+
+          <select
+            value={model}
+            onChange={(e) =>
+              setModel(e.target.value)
+            }
+          >
+            {models.map((m) => (
+              <option
+                key={m.id}
+                value={m.id}
+              >
+                {m.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </header>
+
+      <div className="chat-window">
         {messages.map((msg, idx) => (
           <div
             key={idx}
-            style={{
-              display: "flex",
-              justifyContent:
-                msg.role === "user"
-                  ? "flex-end"
-                  : "flex-start",
-              marginBottom: "10px",
-            }}
+            className={`message ${msg.role}`}
           >
-            <div
-              style={{
-                maxWidth: "70%",
-                padding: "12px",
-                borderRadius: "12px",
-                background:
-                  msg.role === "user"
-                    ? "#2563eb"
-                    : "#f1f5f9",
-                color:
-                  msg.role === "user"
-                    ? "white"
-                    : "black",
-              }}
-            >
+            <ReactMarkdown>
               {msg.content}
-            </div>
+            </ReactMarkdown>
           </div>
         ))}
 
         {loading && (
-          <div>
-            <em>Thinking...</em>
+          <div className="thinking">
+            Thinking...
           </div>
         )}
       </div>
 
       <textarea
-        rows="4"
         value={input}
-        onChange={(e) => setInput(e.target.value)}
-        onKeyDown={handleKeyDown}
+        rows="4"
         placeholder="Type message..."
-        style={{
-          width: "100%",
-          padding: "10px",
-          borderRadius: "10px",
-        }}
+        onChange={(e) =>
+          setInput(e.target.value)
+        }
+        onKeyDown={handleKeyDown}
       />
 
-      <button
-        onClick={sendMessage}
-        style={{
-          marginTop: "10px",
-          padding: "10px",
-        }}
-      >
+      <button onClick={sendMessage}>
         Send
       </button>
     </div>
