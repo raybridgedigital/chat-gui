@@ -12,7 +12,7 @@ function createConversation() {
 
 function App() {
 
-  const APP_VERSION = "v0.7.2";
+  const APP_VERSION = __APP_VERSION__;
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
