@@ -6,9 +6,51 @@ body {
 }
 
 .app {
-  max-width: 1200px;
-  margin: 0 auto;
+  display: flex;
   height: 100vh;
+}
+
+.sidebar {
+  width: 220px;
+  background: #0f172a;
+  border-right: 1px solid #374151;
+  padding: 12px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.new-chat-btn {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 12px;
+}
+
+.conversation-item {
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 6px;
+  background: transparent;
+  transition: background 0.2s;
+}
+
+.conversation-item:hover {
+  background: #1e293b;
+}
+
+.conversation-item.active {
+  background: #2563eb;
+}
+
+.conversation-title {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.main-panel {
+  flex: 1;
   display: flex;
   flex-direction: column;
   padding: 20px;
@@ -25,6 +67,7 @@ body {
 .selectors {
   display: flex;
   gap: 12px;
+  margin-left: auto;
 }
 
 select,
@@ -64,6 +107,8 @@ select {
 
 .assistant {
   background: #374151;
+  margin-right: auto;
+  text-align: left;
 }
 
 textarea {
@@ -82,10 +127,4 @@ button {
 .thinking {
   opacity: 0.7;
   font-style: italic;
-}
-
-.assistant {
-  background: #374151;
-  margin-right: auto;
-  text-align: left;
 }

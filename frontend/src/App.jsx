@@ -114,6 +114,82 @@ function App() {
     });
   }, [messages, loading]);
 
+  function createNewChat() {
+    const convo = createConversation();
+
+    setConversations((prev) => [
+      convo,
+      ...prev,
+    ]);
+
+    setActiveConversationId(convo.id);
+  }
+
+
+  function renameConversation(id) {
+
+    const convo =
+      conversations.find(
+        (c) => c.id === id
+      );
+
+    const newTitle = prompt(
+      "Rename conversation:",
+      convo?.title || ""
+    );
+
+    if (!newTitle?.trim()) return;
+
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === id
+          ? {
+              ...c,
+              title: newTitle.trim(),
+            }
+          : c
+      )
+    );
+  }
+
+  function deleteConversation(id) {
+
+    if (
+      !confirm(
+        "Delete this conversation?"
+      )
+    )
+      return;
+
+    const updated =
+      conversations.filter(
+        (c) => c.id !== id
+      );
+
+    if (updated.length === 0) {
+
+      const convo =
+        createConversation();
+
+      setConversations([convo]);
+      setActiveConversationId(
+        convo.id
+      );
+
+      return;
+    }
+
+    setConversations(updated);
+
+    if (
+      activeConversationId === id
+    ) {
+      setActiveConversationId(
+        updated[0].id
+      );
+    }
+  }
+
   async function sendMessage() {
     if (
       !input.trim() ||
@@ -121,6 +197,11 @@ function App() {
       !activeConversation
     )
       return;
+
+    const title =
+      activeConversation.messages.length === 0
+        ? input.slice(0, 40)
+        : activeConversation.title;
 
     const updatedMessages = [
       ...messages,
@@ -135,6 +216,7 @@ function App() {
         c.id === activeConversationId
           ? {
               ...c,
+              title,
               messages: updatedMessages,
             }
           : c
@@ -259,85 +341,161 @@ function App() {
 
   return (
     <div className="app">
-      <header className="topbar">
-        <h2>Chat GUI</h2>
+      <aside className="sidebar">
 
-        <div className="selectors">
-          <select
-            value={provider}
-            onChange={(e) =>
-              setProvider(
-                e.target.value
-              )
+        <button
+          className="new-chat-btn"
+          onClick={createNewChat}
+        >
+          + New Chat
+        </button>
+
+        {conversations.map((c) => (
+          <div
+            key={c.id}
+            className={`conversation-item ${
+              c.id === activeConversationId
+                ? "active"
+                : ""
+            }`}
+            onClick={() =>
+              setActiveConversationId(c.id)
             }
           >
-            <option value="openrouter">
-              OpenRouter
-            </option>
-
-            <option value="ollama">
-              Ollama
-            </option>
-          </select>
-
-          <select
-            value={model}
-            onChange={(e) =>
-              setModel(
-                e.target.value
-              )
-            }
-          >
-            {models.map((m) => (
-              <option
-                key={m.id}
-                value={m.id}
-              >
-                {m.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </header>
-
-      <div className="chat-window">
-        {messages.map(
-          (msg, idx) => (
             <div
-              key={idx}
-              className={`message ${msg.role}`}
+              style={{
+                display: "flex",
+                justifyContent:
+                  "space-between",
+                alignItems: "center",
+                gap: "8px",
+              }}
             >
-              <ReactMarkdown>
-                {msg.content}
-              </ReactMarkdown>
+              <div className="conversation-title">
+                {c.title}
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: "4px",
+                }}
+              >
+                <button
+                  style={{
+                    padding: "2px 6px",
+                    margin: 0,
+                    fontSize: "12px",
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    renameConversation(c.id);
+                  }}
+                >
+                  ✏️
+                </button>
+
+                <button
+                  style={{
+                    padding: "2px 6px",
+                    margin: 0,
+                    fontSize: "12px",
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteConversation(c.id);
+                  }}
+                >
+                  🗑️
+                </button>
+              </div>
             </div>
-          )
-        )}
-
-        {loading && (
-          <div className="thinking">
-            Thinking...
           </div>
-        )}
+        ))}
+      </aside>
 
-        <div ref={chatEndRef}></div>
+      <div className="main-panel">
+
+        <header className="topbar">
+          <h2>Chat GUI</h2>
+
+          <div className="selectors">
+            <select
+              value={provider}
+              onChange={(e) =>
+                setProvider(
+                  e.target.value
+                )
+              }
+            >
+              <option value="openrouter">
+                OpenRouter
+              </option>
+
+              <option value="ollama">
+                Ollama
+              </option>
+            </select>
+
+            <select
+              value={model}
+              onChange={(e) =>
+                setModel(
+                  e.target.value
+                )
+              }
+            >
+              {models.map((m) => (
+                <option
+                  key={m.id}
+                  value={m.id}
+                >
+                  {m.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </header>
+
+        <div className="chat-window">
+          {messages.map(
+            (msg, idx) => (
+              <div
+                key={idx}
+                className={`message ${msg.role}`}
+              >
+                <ReactMarkdown>
+                  {msg.content}
+                </ReactMarkdown>
+              </div>
+            )
+          )}
+
+          {loading && (
+            <div className="thinking">
+              Thinking...
+            </div>
+          )}
+
+          <div ref={chatEndRef}></div>
+        </div>
+
+        <textarea
+          value={input}
+          rows="4"
+          placeholder="Type message..."
+          onChange={(e) =>
+            setInput(
+              e.target.value
+            )
+          }
+          onKeyDown={handleKeyDown}
+        />
+
+        <button onClick={sendMessage}>
+          Send
+        </button>
       </div>
-
-      <textarea
-        value={input}
-        rows="4"
-        placeholder="Type message..."
-        onChange={(e) =>
-          setInput(
-            e.target.value
-          )
-        }
-        onKeyDown={handleKeyDown}
-      />
-
-      <button onClick={sendMessage}>
-        Send
-      </button>
     </div>
   );
 }
