@@ -7,6 +7,35 @@ from providers.factory import get_provider
 
 app = FastAPI()
 
+from fastapi import UploadFile, File
+import fitz
+
+
+@app.post("/extract-pdf")
+async def extract_pdf(
+    file: UploadFile = File(...)
+):
+
+    pdf_bytes = await file.read()
+
+    doc = fitz.open(
+        stream=pdf_bytes,
+        filetype="pdf"
+    )
+
+    text_content = ""
+
+    for page in doc:
+        text_content += page.get_text()
+
+    doc.close()
+
+    return {
+        "text": text_content
+    }
+
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
