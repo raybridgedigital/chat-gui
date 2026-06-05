@@ -648,7 +648,7 @@ ${input}`
           <input
             ref={fileInputRef}
             type="file"
-            accept=".txt,.md"
+            accept=".txt,.md,.pdf"
             onChange={handleFileUpload}
           />
 
