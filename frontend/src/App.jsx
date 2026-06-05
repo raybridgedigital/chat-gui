@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import "./App.css";
 
@@ -10,6 +10,7 @@ function App() {
   const [provider, setProvider] = useState("openrouter");
   const [models, setModels] = useState([]);
   const [model, setModel] = useState("");
+  const chatEndRef = useRef(null);
 
   useEffect(() => {
     loadModels();
@@ -51,6 +52,12 @@ function App() {
     reload();
   }, [provider]);
 
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({
+      behavior: "smooth",
+    });
+  }, [messages, loading]);
+
   async function sendMessage() {
     if (!input.trim() || loading) return;
 
@@ -68,7 +75,7 @@ function App() {
 
     try {
       const response = await fetch(
-        "http://127.0.0.1:8000/chat",
+        "http://127.0.0.1:8000/chat/stream",
         {
           method: "POST",
           headers: {
@@ -82,15 +89,39 @@ function App() {
         }
       );
 
-      const data = await response.json();
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      let assistantMessage = "";
 
       setMessages([
         ...updatedMessages,
         {
           role: "assistant",
-          content: data.response,
+          content: "",
         },
       ]);
+
+      while (true) {
+
+        const { done, value } =
+          await reader.read();
+
+        if (done) break;
+
+        const chunk =
+          decoder.decode(value);
+
+        assistantMessage += chunk;
+
+        setMessages([
+          ...updatedMessages,
+          {
+            role: "assistant",
+            content: assistantMessage,
+          },
+        ]);
+      }
     } catch {
       setMessages([
         ...updatedMessages,
@@ -167,6 +198,8 @@ function App() {
             Thinking...
           </div>
         )}
+
+        <div ref={chatEndRef}></div>
       </div>
 
       <textarea

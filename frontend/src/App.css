@@ -83,3 +83,9 @@ button {
   opacity: 0.7;
   font-style: italic;
 }
+
+.assistant {
+  background: #374151;
+  margin-right: auto;
+  text-align: left;
+}

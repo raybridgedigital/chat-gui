@@ -1,11 +1,9 @@
 from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from openai import OpenAI
-from dotenv import load_dotenv
-import os
 
-load_dotenv()
+from providers.factory import get_provider
 
 app = FastAPI()
 
@@ -16,20 +14,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-openrouter_client = OpenAI(
-    base_url="https://openrouter.ai/api/v1",
-    api_key=os.getenv("OPENROUTER_API_KEY")
-)
-
-SYSTEM_PROMPT = {
-    "role": "system",
-    "content": """
-You are ChatGUI Assistant.
-
-You are an AI systems architect and agent-engineering expert.
-"""
-}
 
 
 class ChatRequest(BaseModel):
@@ -77,19 +61,27 @@ async def get_models():
 @app.post("/chat")
 async def chat(req: ChatRequest):
 
-    if req.provider == "openrouter":
+    provider = get_provider(req.provider)
 
-        completion = openrouter_client.chat.completions.create(
-            model=req.model,
-            messages=[SYSTEM_PROMPT] + req.messages
-        )
-
-        return {
-            "response":
-            completion.choices[0].message.content
-        }
+    response = provider.chat(
+        req.model,
+        req.messages
+    )
 
     return {
-        "response":
-        f"Provider '{req.provider}' not implemented yet."
+        "response": response
     }
+
+
+@app.post("/chat/stream")
+async def chat_stream(req: ChatRequest):
+
+    provider = get_provider(req.provider)
+
+    return StreamingResponse(
+        provider.stream(
+            req.model,
+            req.messages
+        ),
+        media_type="text/plain"
+    )
