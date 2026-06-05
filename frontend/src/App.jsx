@@ -11,6 +11,8 @@ function createConversation() {
 }
 
 function App() {
+
+  const APP_VERSION = "v0.7.2";
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -503,6 +505,8 @@ ${input}`
           + New Chat
         </button>
 
+        
+
         {conversations.map((c) => (
           <div
             key={c.id}
@@ -570,7 +574,22 @@ ${input}`
       <div className="main-panel">
 
         <header className="topbar">
-          <h2>Reza GPT</h2>
+          
+<h2>
+  Reza GPT
+  <span
+    style={{
+      fontSize: "12px",
+      fontWeight: "normal",
+      opacity: 0.7,
+      marginLeft: "8px",
+      verticalAlign: "middle",
+    }}
+  >
+    {APP_VERSION}
+  </span>
+</h2>
+
 
           <div className="selectors">
             <select
